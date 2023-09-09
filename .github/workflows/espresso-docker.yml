@@ -15,7 +15,7 @@ env:
 jobs:
   push_docker_image:
     name: Build and push Docker image
-    runs-on: [self-hosted, arm64]
+    runs-on: ubuntu-latest
     env:
       RELEASE_VERSION: 5.2.2
     steps:
