@@ -1,0 +1,68 @@
+name: Espresso Publish Docker image
+
+on:
+  push:
+    branches:
+      - main
+      - release-*
+  pull_request:
+  workflow_dispatch:
+
+env:
+  OTP_VERSION: '25.2.1'
+  ELIXIR_VERSION: '1.14.3'
+
+jobs:
+  push_docker_image:
+    name: Build and push Docker image
+    runs-on: ubuntu-latest
+    env:
+      RELEASE_VERSION: 5.2.2
+    steps:
+      - name: Check out the repo
+        uses: actions/checkout@v3
+
+      - name: Set up QEMU
+        uses: docker/setup-qemu-action@v2
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v2
+
+      - name: Login to Github Container Repo
+        uses: docker/login-action@v2
+        if: github.event_name != 'pull_request'
+        with:
+          registry: ghcr.io
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Generate blockscout docker metadata
+        uses: docker/metadata-action@v4
+        id: blockscout
+        with:
+          images: ghcr.io/espressosystems/espresso-sequencer/blockscout
+
+      - name: Build and push blockscout docker
+        uses: docker/build-push-action@v4
+        with:
+          context: .
+          file: ./docker/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.blockscout.outputs.tags }}
+          labels: ${{ steps.blockscout.outputs.labels }}
+          platforms: linux/amd64,arm64
+          build-args: |
+            CACHE_EXCHANGE_RATES_PERIOD=
+            API_V1_READ_METHODS_DISABLED=false
+            DISABLE_WEBAPP=false
+            API_V1_WRITE_METHODS_DISABLED=false
+            CACHE_TOTAL_GAS_USAGE_COUNTER_ENABLED=
+            ADMIN_PANEL_ENABLED=false
+            DECODE_NOT_A_CONTRACT_CALLS=false
+            MIXPANEL_URL=
+            MIXPANEL_TOKEN=
+            AMPLITUDE_URL=
+            AMPLITUDE_API_KEY=
+            CACHE_ADDRESS_WITH_BALANCES_UPDATE_INTERVAL=
+            BLOCKSCOUT_VERSION=v${{ env.RELEASE_VERSION }}-beta
+            RELEASE_VERSION=${{ env.RELEASE_VERSION }}
